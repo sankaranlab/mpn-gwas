@@ -1,0 +1,2 @@
+p2	rg	se	z	p	h2_obs	h2_obs_se	h2_int	h2_int_se	gcov_int	gcov_int_se
+telomere.sumstats.gz	0.3465	0.1316	2.6326	0.0085	0.0358	0.0107	1	NA	0	NA
