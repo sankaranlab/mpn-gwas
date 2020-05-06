@@ -1,0 +1,7 @@
+Sample	Mean
+Non-risk	101685
+Non-risk	97530
+Non-risk	98041
+Risk	58272
+Risk	58234
+Risk	57182

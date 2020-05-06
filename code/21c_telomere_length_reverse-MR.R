@@ -6,7 +6,8 @@ library(TwoSampleMR)
 library(MRPRESSO)
 
 # Exposure data for all SNPs p < 1e-5
-mpn_sumstats <- fread("/Volumes/broad_sankaranlab/MPN_GWAS/metaGWAS/Hinds_UKBB_finngen_metal_sumstats_risk_oriented.p1e-5.txt.gz")
+exposure_sumstats <- "file path for exposure sum stats"
+mpn_sumstats <- fread(exposure_sumstats)
 exposure_dat <- format_data(mpn_sumstats,type="exposure",
                             snp_col = "RSID",
                             beta_col = "Effect",
@@ -17,18 +18,19 @@ exposure_dat <- format_data(mpn_sumstats,type="exposure",
                             pval_col = "pvalue")
 
 # Outcome data
+outcome_sumstats <- "file path for outcome sum stats"
 outcome_dat <- read_outcome_data(
   snps = exposure_dat$SNP,
-  filename = "/Volumes/broad_sankaranlab/telomere_length_GWAS/ENGAGE_telo_overall_finalrelease.high_sample_size.rsids.txt.gz",
+  filename = outcome_sumstats,
   sep = "\t",
-  snp_col = "snp",
+  snp_col = "rsid",
   beta_col = "beta",
   se_col = "se",
-  effect_allele_col = "effectall",
-  other_allele_col = "noneffectall",
+  effect_allele_col = "ea",
+  other_allele_col = "oa",
   eaf_col = "eaf",
-  pval_col = "p_gc",
-  samplesize_col = "n"
+  pval_col = "pvalue",
+  samplesize_col = "n_samples"
 ) %>% mutate(outcome = "telomere length")
 
 # Harmonize data
@@ -51,15 +53,3 @@ mr_presso(data = dat_clumped,
           OUTLIERtest = TRUE, DISTORTIONtest = TRUE, 
           NbDistribution = 1000,  SignifThreshold = 0.05)
 
-# Plots
-p1 <- mr_scatter_plot(res, dat)
-p1[[1]]
-
-res_single <- mr_singlesnp(dat,single_method="mr_meta_fixed",
-                           all_method=methods_to_use)
-p2 <- mr_forest_plot(res_single)
-p2[[1]]
-
-res_loo <- mr_leaveoneout(dat,method = TwoSampleMR::mr_ivw)
-p3 <- mr_leaveoneout_plot(res_loo)
-p3[[1]]

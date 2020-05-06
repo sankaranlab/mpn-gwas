@@ -1,0 +1,2 @@
+p2	rg	se	z	p	h2_obs	h2_obs_se	h2_int	h2_int_se	gcov_int	gcov_int_se
+CHIP.sumstats.gz	0.4654	0.2581	1.8031	0.0714	0.0102	0.0047	1.0021	0.0047	-0.0053	0.0041

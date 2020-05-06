@@ -5,7 +5,7 @@ library(BuenColors)
 THE_PALETTE <- jdb_palette("solar_rojos")
 
 # Import data
-gchromvar <- read.table("../output/gchromVAR/gchromVAR_abf_MPN_zscores.txt", stringsAsFactors = FALSE)
+gchromvar <- fread("../output/gchromVAR/gchromVAR_abf_MPN_arraycovar_meta_finngen_r4_zscores.txt", stringsAsFactors = FALSE)
 
 # Set up coordinates
 cellCoordsDF <- data.frame(
@@ -20,9 +20,10 @@ cellCoordsDF <- data.frame(
 
 makeCVplot <- function(plottrait){
   df <- gchromvar
-  plotdf <- merge(cellCoordsDF, df[df$V2 == plottrait, ],
-                  by.x = "CellLabel", by.y = "V1")
-  plotdf$pvalue <-  pnorm(plotdf$V3, lower.tail = FALSE)
+  plotdf <- merge(cellCoordsDF, df[df$Trait == plottrait, ],
+                  by.x = "CellLabel", by.y = "Celltype")
+  plotdf$zscore <- as.numeric(plotdf$zscore)
+  plotdf$pvalue <-  pnorm(plotdf$zscore, lower.tail = FALSE)
 
   p1 <- ggplot(plotdf, aes(x = x, y = y, color =  -log10(pvalue))) + 
     geom_point(size = 11) + pretty_plot() +
@@ -35,5 +36,5 @@ makeCVplot <- function(plottrait){
   return(plottrait)
 }
 
-plot_out <-  makeCVplot("MPN_CML_abf_cojo_PP0.001")
+plot_out <-  makeCVplot("MPN_arraycovar_meta_finngen_r4")
 

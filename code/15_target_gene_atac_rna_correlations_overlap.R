@@ -6,8 +6,7 @@ library(annotables)
 library(qvalue)
 
 # Load protein coding annotations
-grch38.pc <- grch38 %>%
-  dplyr::filter(biotype == "protein_coding")
+grch38.pc <- grch38 %>% dplyr::filter(biotype == "protein_coding")
 
 # Read in enhancer gene correlations
 pg.df <- fread(paste0("zcat < ", "../data/rna/peakGeneCorrelation.tsv.gz"))
@@ -17,9 +16,10 @@ pg.df <- pg.df %>% filter(qvalue < 0.001) %>% filter(gene %in% grch38.pc$symbol)
 pg.gr <- GRanges(pg.df)
 
 # Read in fine-mapped CS
-CS.df<- fread("../data/abf_finemap/MPN_CML_abf_cojo_95CS.bed")
+CS.df<- fread("../data/abf_finemap/MPN_arraycovar_meta_finngen_r4_abf_cojo_95CS.bed")
+
 # Remove regions with high PP coding variant
-VEP.PP10 <- fread("../output/VEP/coding_variants_PP01.tsv") %>% filter(PP>0.10 | sentinel == "yes")
+VEP.PP10 <- fread("../output/VEP/MPN_arraycovar_meta_finngen_r4.coding_variants_PP01.tsv") %>% filter(PP>0.10 | sentinel=="yes")
 CS.df <- CS.df %>% filter(region %ni% VEP.PP10$region)
 
 CS.gr <- GRanges(CS.df); end(CS.gr) <- end(CS.gr)-1
@@ -37,6 +37,6 @@ pg_overlap %>% filter(PP>0.01 | sentinel == "yes") %>% group_by(var) %>%
   filter(pvalue == min(pvalue)) %>% .$gene %>% unique()
 
 # Write atac_rna gene targets table
-write.table(pg_overlap,"../output/target_genes/atac_rna_target_genes.tsv",
+write.table(pg_overlap,"../output/target_genes/r4_atac_rna_target_genes.tsv",
             quote = FALSE, sep = "\t", col.names = T, row.names = F)
 

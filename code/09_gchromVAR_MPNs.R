@@ -10,12 +10,13 @@ library(cowplot)
 library(diffloop)
 library(preprocessCore)
 library(stringr)
+set.seed(1026)
 "%ni%" <- Negate("%in%")
 
-set.seed(1026)
-
-# Import and run run run
-# # 250bp
+trait <- "MPN_arraycovar_meta_finngen_r4"
+towrite <- TRUE
+# Import and run
+# ATAC
 peaksdf <- fread("../data/atac/26August2017_EJCsamples_allReads_250bp.bed")
 peaks <- makeGRangesFromDataFrame(peaksdf, seqnames = "V1", start.field = "V2", end.field = "V3")
 counts <-  data.matrix(fread("../data/atac/26August2017_EJCsamples_allReads_250bp.counts.txt"))
@@ -30,33 +31,26 @@ SE <- addGCBias(SE, genome = BSgenome.Hsapiens.UCSC.hg19)
 # Function to take the sum of the absolute values of a number
 # Needs at least 2 bed files to compare with each other
 mpns <- importBedScore(rowRanges(SE), 
-                       list.files("../data/abf_finemap/for_gchromVAR/all", full.names = TRUE, pattern = ".bed$"),
+                       list.files("../data/abf_finemap/for_gchromVAR/all", full.names = TRUE, pattern = "^MPN_array"),
                        colidx = 4)
 
-# Analyze where weights are concentrated
-if (FALSE){
-  keepPeaks <- assays(mpns)[["weights"]][,1] > 0.01
-  mega_df <- data.frame(
-    rowRanges(SE)[keepPeaks],
-    data.matrix(cpm[keepPeaks,]),
-    sumPP=data.matrix(assays(mpns)[["weights"]][keepPeaks,1]))
-  mega_df %>% arrange(desc(sumPP)) %>% dplyr::select(seqnames,start,end,HSC,CLP,sumPP)
-}
 
 # Run g-chromVAR
-bg <- getBackgroundPeaks(SE,niterations=50)
+bg <- getBackgroundPeaks(SE,niterations=200)
 dev <- computeWeightedDeviations(SE, mpns, background_peaks = bg)
-outdf <- melt(t(assays(dev)[["z"]]))
-outdf$pval <- pnorm(outdf$value, lower.tail = FALSE)
-outdf$logp <- -log10(outdf$pval)
-mdf <- outdf %>% filter(!grepl('duplicate', Var2)) %>% arrange(desc(logp))
-mdf$qvalue <- qvalue::qvalue(mdf$pval,lambda=0)$qvalues
-mdf$Var1 <- factor(mdf$Var1,levels=mdf$Var1)
-mdf
+
+# Reformat results
+zscoreWeighted <- melt(t(assays(dev)[["z"]]))
+zscoreWeighted[,2] <- gsub("_abf_cojo_PP0.001", "", zscoreWeighted[,2])
+colnames(zscoreWeighted) <- c("Celltype","Trait","zscore")
+
+zscoreWeighted$logp <- -log10(pnorm(zscoreWeighted$zscore, lower.tail = FALSE))
+outdf <- zscoreWeighted %>% filter(!grepl('duplicate', Trait)) %>% arrange(desc(logp))
+outdf$Celltype <- factor(outdf$Celltype,levels=outdf$Celltype)
 
 # Barplot of -log10(p-values)
-p1 <- ggplot(mdf,aes(x = Var1, y = logp)) +
-  geom_bar(width = 1, aes(fill = Var1), colour="black",
+p1 <- ggplot(outdf,aes(x = Celltype, y = logp)) +
+  geom_bar(width = 1, aes(fill = Celltype), colour="black",
            stat = "identity", position = position_dodge(width=1))+
   pretty_plot(fontsize = 8) + L_border() +
   scale_fill_manual(values = ejc_color_maps) +
@@ -67,21 +61,18 @@ p1 <- ggplot(mdf,aes(x = Var1, y = logp)) +
         axis.text.x = element_text(angle = 45, hjust = 1))
 p1 
 
-if (FALSE){
-  cowplot::ggsave2(p1, filename = "../output/gchromVAR/gchromVAR_abf_MPN_noncoding_only_logp.pdf", width = 3, height = 3)
+if (towrite){
+  cowplot::ggsave2(p1, filename = paste0("../output/gchromVAR/gchromVAR_abf_",trait,"_logp.pdf"), width = 3, height = 3)
 }
 
-# Make tables and export
-widemat <- t(assays(dev)[["z"]])
-colnames(widemat) <- gsub(".PP001","",colnames(widemat))
-zscoreCHROMVAR <- melt(widemat)
-zscoreCHROMVAR <- zscoreCHROMVAR %>% filter(!grepl('duplicate', Var2)) %>% arrange(desc(abs(value)))
-write.table(zscoreCHROMVAR, "../output/gchromVAR/gchromVAR_abf_MPN_zscores.txt", 
-            sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+# Export table
+if (towrite){
+  fwrite(outdf, paste0("../output/gchromVAR/gchromVAR_abf_",trait,"_zscores.txt"), sep = "\t")
+}
 
 # z scores
-p1 <- ggplot(mdf,aes(x = Var1, y = value)) +
-  geom_bar(width = 1, aes(fill = Var1), colour="black",
+p1 <- ggplot(outdf,aes(x = Celltype, y = zscore)) +
+  geom_bar(width = 1, aes(fill = Celltype), colour="black",
            stat = "identity", position = position_dodge(width=1))+
   pretty_plot(fontsize = 10) + L_border() + 
   scale_fill_manual(values = ejc_color_maps) +
@@ -92,8 +83,6 @@ p1 <- ggplot(mdf,aes(x = Var1, y = value)) +
         axis.text.x = element_text(angle = 45, hjust = 1))
 
 p1
-if (FALSE){
-  cowplot::ggsave2(p1, filename = "../output/gchromVAR/gchromVAR_abf_MPN_zscores.pdf", width = 4.5, height = 3)
+if (towrite){
+  cowplot::ggsave(p1, filename = paste0("../output/gchromVAR/gchromVAR_abf_",trait,"_zscores.pdf"), width = 4.5, height = 3)
 }
-
-

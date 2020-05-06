@@ -9,8 +9,8 @@ library(diffloop)
 toplot <- T
 
 # Read in CS and sentinels
-CS.df <- fread("../data/abf_finemap/MPN_CML_abf_cojo_95CS.bed")
-sentinels <- fread("../data/sentinels/MPN_CML.meta.cojo.suggestive_loci.withsentinels.tsv")
+CS.df <- fread("../data/abf_finemap/MPN_arraycovar_meta_finngen_r4_abf_cojo_95CS.bed")
+sentinels <- fread("../data/meta-gwas/sentinels/MPN_arraycovar_meta_finngen_r4.cojo.suggestive_loci.withsentinels.tsv")
 
 # Median genetic width of CS
 CS.df %>% group_by(region) %>% summarise(ranges=max(start)-min(start)) %>% .$ranges %>% median()
@@ -25,7 +25,7 @@ pval_cors <- lapply(seq(1,length(unique(CS.df$region))),function(y){
 })
 
 # Size of CS
-sentinels$CSbin <- cut(sentinels$CS, c(1,5,10,20,50,10000),include.lowest=T)
+sentinels$CSbin <- cut(sentinels$CS, c(1,2,10,20,50,10000),include.lowest=T)
 CS.df.sum <- sentinels %>%
   group_by(CSbin) %>%
   summarize(count=n()) 
@@ -42,7 +42,7 @@ p1 <- ggplot(CS.df.sum,aes(y=count,x=1)) +
   guides(fill=guide_legend(title="CS size"))
 
 if (toplot){
-  cowplot::ggsave22(p1, file="../output/finemap/number_variants_each_CS.pdf", width=6.5,height=1)
+  cowplot::ggsave2(p1, file="../output/finemap/r4_number_variants_each_CS.pdf", width=6.5,height=1)
 }
 
 # Correlate size of CS with MAF
@@ -58,8 +58,8 @@ p2 <- ggplot(sentinels,aes(x=freq,y=CS))+
   labs(x="sentinel MAF",y="size of credible set")
 
 if (toplot){
-  cowplot::ggsave2(p1, file="../output/finemap/maf_to_CS_size.pdf", width=2,height=2)
-  cowplot::ggsave2(p2, file="../output/finemap/maf_to_CS_size_log10.pdf", width=2,height=2)
+  cowplot::ggsave2(p1, file="../output/finemap/r4_maf_to_CS_size.pdf", width=2,height=2)
+  cowplot::ggsave2(p2, file="../output/finemap/r4_maf_to_CS_size_log10.pdf", width=2,height=2)
 }
 
 # Bin the CS PPs for high threshold
@@ -78,14 +78,38 @@ p2 <- ggplot(CS.df.sum,aes(y=count,x=1)) +
   labs(x="",y="number of regions")+
   scale_fill_manual(values = c(jdb_palette("GrandBudapest2")[c(3,4)],jdb_palette("Zissou")[1:5])) +
   theme_void() +
-  theme(legend.position="none")s
+  theme(legend.position="none")
+
+# Bin the CS PPs for low threshold
+CS.df.lowPP <- CS.df %>% filter(PP > 0.01, PP < 0.25)
+CS.df.lowPP$PPbin <- cut(CS.df.lowPP$PP, c(0.01,0.05, 0.10,0.25))
+CS.df.sum <- CS.df.lowPP %>%
+  group_by(PPbin) %>%
+  summarize(count=n())
+
+p3 <- ggplot(CS.df.sum,aes(y=count,x=1)) + 
+  geom_bar(stat="identity",aes(fill=PPbin),position = position_stack(reverse = T)) + 
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5,reverse=F), size = 3) +
+  coord_flip()+
+  pretty_plot(fontsize = 8) + L_border()+
+  scale_y_continuous(expand=c(0,0))+
+  labs(x="",y="number of regions")+
+  scale_fill_manual(values = c(jdb_palette("dusk_dawn")[3:1])) +
+  theme_void() +
+  theme(legend.position="none")
+
+if (toplot){
+  cowplot::ggsave2(p2, file="../output/finemap/r4_CS_highPP_variants.pdf", width=4.5,height=1)
+  cowplot::ggsave2(p3, file="../output/finemap/r4_CS_lowPP_variants.pdf", width=3,height=1)
+}
 
 # Top variant PP per region
-CS.best <- CS.df %>% arrange(region,desc(PP)) %>% group_by(region) %>% top_n(1,PP)
-CS.best$PPbin <- cut(CS.best$PP, c(0, 0.001, 0.01, 0.05, 0.1, 0.25, 0.75, 1.0))
+CS.best <- CS.df %>% arrange(region,desc(PP)) %>% group_by(region) %>% top_n(1,PP) %>% distinct(region,.keep_all = TRUE)
+CS.best$PPbin <- cut(CS.best$PP, c(0, 0.01, 0.1, 0.25, 0.75, 1.0))
 CS.df.best.sum <- CS.best %>%
   group_by(PPbin) %>%
   summarize(count=n())  %>% mutate(trait="MPN")
+CS.df.best.sum
 CS.df.best.sum$PPbin <- factor(CS.df.best.sum$PPbin, levels=levels(CS.df.best.sum$PPbin))
 
 p4 <- ggplot(CS.df.best.sum,aes(y=count,x=1,fill=PPbin,label=count)) + 
@@ -99,7 +123,7 @@ p4 <- ggplot(CS.df.best.sum,aes(y=count,x=1,fill=PPbin,label=count)) +
   theme_void() +
   theme(legend.position="none") 
 if (toplot){
-  cowplot::ggsave2(p4, file="../output/finemap/top_variant_per_region.pdf", width=6.5,height=1)
+  cowplot::ggsave2(p4, file="../output/finemap/r4_top_variant_per_region.pdf", width=6.5,height=1)
 }
 
 # Genomic annotations
@@ -146,5 +170,5 @@ p5 <- ggplot(totalDF, aes(x = 1, y = prop)) +
   theme(legend.position = "none",legend.title = element_blank())
   
 if (toplot){
-  cowplot::ggsave2(p5, filename = "../output/finemap/annotations_proportions.pdf", width = 6.5,height = 1)
+  cowplot::ggsave2(p5, filename = "../output/finemap/r4_annotations_proportions.pdf", width = 6.5,height = 1)
 }

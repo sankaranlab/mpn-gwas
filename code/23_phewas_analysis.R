@@ -13,15 +13,21 @@ library(ggrepel)
 # Write list of variants for pheWAS input ---------------------------------
 if (FALSE){
   # Add leading 0 to chromosomes under 10
-  CS.df <- fread("../data/abf_finemap/MPN_CML_abf_cojo_PP0.001_annotated.bed") %>% 
+  CS.df <- fread("../data/abf_finemap/MPN_arraycovar_meta_finngen_r4_abf_cojo_PP0.001_annotated.bed") %>% 
     mutate(chr = as.integer(gsub("chr","",seqnames))) %>% mutate(var = ifelse(chr < 10,paste0("0",var),var)) %>%
     dplyr::select(var) %>% unique()
-  fwrite(CS.df,file="../output/phewas/MPN_PP001_phewas_input_leading_zeros.txt",sep="\t",col.names = F)
+  fwrite(CS.df,file="../output/phewas/r4_MPN_PP001_phewas_input_leading_zeros.txt",sep="\t",col.names = F)
+  
+  # Non-leading 0
+  CS.df <- fread("../data/abf_finemap/MPN_arraycovar_meta_finngen_r4_abf_cojo_PP0.001_annotated.bed")  %>%
+    dplyr::select(var) %>% unique()
+  fwrite(CS.df,file="../output/phewas/r4_MPN_PP001_phewas_input_nonleading_zeros.txt",sep="\t",col.names = F)
+  
 }
 
 # SAIGE pheWAS ------------------------------------------------------------
 # Read phewas results
-icd <- fread("zcat < ../output/phewas/SAIGE.allphenos.MPN.txt.gz") %>%
+icd <- fread("zcat < ../output/phewas/SAIGE.allphenos.mpn_r4.txt.gz") %>%
   mutate(var = paste(CHROM,POS,REF,ALT,sep=":"), maf = ifelse(af < 0.5, af, 1-af),
          expected_case_minor_AC =  2 * maf * num_cases, logp = -log10(pval),
          var = paste0(CHROM,":",POS,"_",REF,"_",ALT)) %>%
@@ -35,8 +41,8 @@ phecodes$PheCode <- as.double(phecodes$PheCode)
 icd <- merge(icd,phecodes[,c("PheCode","pheno","category")],by.x="phecode",by.y="PheCode")
 
 # Combine with sum stats 
-CS.df <- fread("../data/abf_finemap/MPN_CML_abf_cojo_95CS.bed")
-merged <- merge(icd,CS.df[,c("var","PP","region_rank")],by="var") %>%
+CS.df <- fread("../data/abf_finemap/MPN_arraycovar_meta_finngen_r4_abf_cojo_PP0.001_annotated.bed")
+merged <- merge(icd,CS.df[,c("var","rsid","PP","pvalue","region","region_rank","effect","stderr")],by="var") %>%
   mutate(CHROM=paste0("chr",CHROM))
 
 # Remove MPNs and polycythemia vera due to redundancy
@@ -49,7 +55,7 @@ merged <- merged %>% filter(var %ni% toexclude)
 
 # Add nearest gene
 # Read in gene body annotations
-gencode_gr <- readRDS("../data/annotations/gencode_filtered.rds")
+gencode_gr <- readRDS("../../bcx-finemap/data/annotations/gencode_filtered.rds")
 
 # Find nearest gene
 merged.gr <- makeGRangesFromDataFrame(merged,keep.extra.columns = T,seqnames.field="CHROM",
@@ -61,36 +67,86 @@ highPP <- merged %>% filter(PP > 0.10| region_rank ==1 )
 num_variants <- highPP %>% .$var %>% unique %>% length() 
 p_threshold <- 0.05 / (length(unique(merged$pheno)))
 
-tolabel <- highPP %>% group_by(category) %>% 
-  dplyr::slice(which.max(logp)) %>%
-  mutate(tolabel=ifelse(logp > -log10(p_threshold),paste(pheno,nearest_gene,sep="-"),"")) %>%  
-  arrange(category,desc(logp)) %>% as.data.frame() %>% dplyr::select(var,tolabel,pheno) 
-toplot<- right_join(tolabel,highPP,by=c("var","pheno")) %>%
-  mutate(tolabel = ifelse(is.na(tolabel),"",tolabel)) %>% 
-  group_by(pheno) %>%mutate(mx = max(logp)) %>%
-  arrange(category,desc(mx),desc(logp)) %>% ungroup() %>%   mutate(order = row_number())
-toplot$pheno <- factor(toplot$pheno, levels=unique(toplot$pheno))
+# Heatmap
+if (FALSE){
+  # Read in cytoband information
+  cytobands.gr <- fread("../data/annotations/cytoBand.txt") %>% 
+    setNames(.,c("seqnames","start","end","locus","stain")) %>% mutate(locus = paste0(gsub("chr","",seqnames),locus)) %>% 
+    GRanges()
+  
+  # Orient by risk allele
+  sumstats <- "file path to summary statistics"
+  risk_oriented <- fread(sumstats)
+  risk_icd <- inner_join(icd,risk_oriented[,c("MarkerName","risk","nonrisk")],by=c("var"="MarkerName"))
+  flipped <- risk_icd %>% filter(ALT != risk) %>% mutate(beta = -1*beta)
+  risk_merged <- risk_icd %>% filter(ALT == risk) %>% bind_rows(.,flipped) %>% mutate(Z = beta/sebeta)
+  
+  # Group by variants, take top variant per region
+  selected <-   sig_vars <- merged %>% filter(pval < p_threshold) %>% 
+    filter(PP > 0.10| region_rank ==1 ) %>% 
+    group_by(region,pheno) %>% dplyr::slice(which.max(PP)) %>% ungroup() %>% as.data.frame() %>% arrange(region)
+  sig_phenos <-selected %>% .$pheno %>% unique()
+  sig_vars <- selected %>% .$rsid %>% unique()
+  gene_annot <- selected %>% distinct(rsid,.keep_all = TRUE) %>% .$nearest_gene
 
-toplot$FDR <- qvalue::qvalue(toplot$pval)$qvalues
+  # Bin the p-values
+  # risk_merged$bin <- cut(risk_merged$pval, c(1, 0.01, p_threshold, 5e-8, 1e-20,0))
+  # Bin z-scores
+  risk_merged$bin <- cut(risk_merged$Z, c(min(risk_merged$Z)-0.01,-2.58 ,2.58, 4.084,8,max(risk_merged$Z)+0.01))
+  table(risk_merged$bin)
+  2*pnorm(-abs(4.084))
+  
+  logp_matrix <- risk_merged %>% filter(pheno %in% sig_phenos) %>% dplyr::select(ID,pheno,bin) %>%
+    pivot_wider(names_from=pheno,values_from=bin) %>% as.data.frame()
+  rownames(logp_matrix) <- logp_matrix[,1]
+  logp_matrix <- logp_matrix[,-1] %>% as.matrix()
+  logp_matrix <- logp_matrix[sig_vars,]
+  logp_matrix[is.na(logp_matrix)] <-levels(risk_merged$bin)[length(levels(risk_merged$bin))]
+  
+  # Get cytobands
+  CS.subset <- CS.df %>% filter(rsid %in% rownames(logp_matrix)) %>% arrange(region) %>% GRanges()
+  locus_idx <- findOverlaps(CS.subset,cytobands.gr)
+  CS.subset$locus <- cytobands.gr[locus_idx@to]$locus
 
-p1 <- ggplot(toplot,aes(x=pheno,y=-log10(FDR),label=tolabel))+
-  geom_point_rast(aes(color=category,fill=category),alpha=1,size=0.5) +
-  scale_color_manual(values=jdb_palette("lawhoops"))+
-  geom_hline(yintercept = -log10(0.01), linetype = 2) +
-  labs(y="pheWAS -log10(FDR)",x="Phenotype") +
-  geom_text_repel(angle = 0,size=2) +  
-  pretty_plot(fontsize=8) + L_border() +
-  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank(),
-        strip.background = element_blank(), strip.text = element_blank(),
-        legend.position ="bottom") +
-  scale_y_continuous(expand = c(0.05, 0))
-p1
-cowplot::ggsave2(p1,file="../output/phewas/phewas_dotplot_categories.pdf",width=4,height=3)
+  logp_matrix <- logp_matrix[CS.subset$rsid,]
+  
+  # Get pheno categories
+  categories <- icd %>% distinct(pheno, .keep_all = T) %>%
+    filter(pheno %in% colnames(logp_matrix)) %>% .$category
+  table(categories)
 
-
-# Write table
-phewas_table <- merged %>%filter(pval < p_threshold) %>% filter(PP > 0.10| region_rank ==1 )%>%
-  dplyr::select(var,ID,pheno,num_cases,maf,beta,sebeta,pval,PP,region_rank,nearest_gene) %>% 
-  arrange(pval)
-fwrite(phewas_table,file="../output/phewas/phewas_sig_phenos.tsv",sep = "\t")
-
+  # Heatmap
+  ha = rowAnnotation(
+    Locus = anno_text(CS.subset$locus, location = 0.5,just="center",
+                      gp = gpar(border="black",fontsize=6)),
+    Nearest_gene = anno_text(gene_annot, location = 0.5,just="center",
+                             gp = gpar(border="black",fontsize=6)),
+    width = max_text_width(CS.subset$locus),
+    annotation_name_gp = gpar(fontsize=6), annotation_name_side = "top")
+  
+  block_anno = HeatmapAnnotation(foo = anno_block(gp = gpar(fill = jdb_palette("lawhoops")),
+                                                  labels = unique(categories), 
+                                                  labels_rot = 90,
+                                                  labels_gp = gpar(col = "white", fontsize = 8)),
+                                 height = max_text_width(categories))
+  
+  pdf(file=paste0("../output/phewas/r4_phewas_heatmap_zscores.pdf"), width = 8, height = 4.5)
+  
+  colors = structure(jdb_palette("solar_flare")[c(9,7,6,5,3)], 
+                     names =rev(levels(risk_merged$bin)))
+  # colors = jdb_palette("solar_extra")
+  Heatmap(logp_matrix, col=colors,
+          cluster_rows = FALSE, cluster_columns = FALSE, 
+          show_column_names = TRUE, column_title = NULL,
+          row_names_gp = gpar(fontsize = 6),
+          column_names_gp = gpar(fontsize = 6),
+          column_names_rot = 45,
+          top_annotation = block_anno,
+          column_split = factor(categories,levels = unique(categories)),
+          show_heatmap_legend = T,
+          border=TRUE,rect_gp = gpar(col = "black", lwd = 1),
+          name = "z-score",
+          row_names_side = "left",
+          left_annotation = ha)
+  dev.off()
+}  

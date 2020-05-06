@@ -1,9 +1,0 @@
-var	region	seqnames	start	end	PP	rsid	effect	stderr	pvalue	maf	region_rank	sentinel	ref	alt	pos	Location	BIOTYPE	SYMBOL	EXON	SIFT	PolyPhen	CADD_PHRED	most_severe_consequence
-11:108143456_C_G	21	chr11	108143456	108143457	0.2991	rs1800057	0.4763	0.0801	2.70E-09	0.0262	1	yes	C	G	108143456	11:108143456	protein_coding	ATM	22/63	tolerated(0.07)	probably_damaging(0.999)	26.5	missense_variant
-12:111884608_T_C	22	chr12	111884608	111884609	0.1781	rs3184504	-0.255	0.028	9.65E-20	0.4811	2	no	T	C	111884608	12:111884608	protein_coding	SH2B3	8-Mar	tolerated(1)	benign(0)	0.012	missense_variant
-6:34211238_C_T	15	chr6	34211238	34211239	0.0266	rs41269028	0.3381	0.0621	5.12E-08	0.0447	6	no	C	T	34211238	6:34211238	protein_coding	HMGA1	-	-	-	9.956	splice_region_variant
-5:111066697_T_C	13	chr5	111066697	111066698	0.0221	rs11559	-0.3004	0.0682	1.05E-05	0.0535	9	no	T	C	111066697	5:111066697	protein_coding	NREP	4-Apr	tolerated(0.06)	benign(0.011)	0.012	missense_variant
-7:1976457_C_T	16	chr7	1976457	1976458	0.021	rs1801368	0.1365	0.0287	1.96E-06	0.3724	7	no	C	T	1976457	7:1976457	protein_coding	MAD1L1	16/18	tolerated(0.22)	benign(0)	17.29	missense_variant
-22:29121087_A_G	28	chr22	29121087	29121088	0.0166	rs17879961	0.953	0.1941	9.16E-07	0.0174	8	yes	A	G	29121087	22:29121087	protein_coding	CHEK2	16-May	tolerated(0.1)	possibly_damaging(0.503)	21.1	missense_variant
-13:41323397_C_T	23	chr13	41323397	41323398	0.0124	rs13508	0.1759	0.0353	6.06E-07	0.1783	31	no	C	T	41323397	13:41323397	protein_coding	MRPS31	7-Jun	deleterious(0.03)	probably_damaging(0.951)	34	missense_variant
-11:108138003_T_C	21	chr11	108138003	108138004	0.0118	rs1800056	0.5562	0.102	4.88E-08	0.0135	12	no	T	C	108138003	11:108138003	protein_coding	ATM	17/63	tolerated(0.15)	benign(0.325)	8.823	missense_variant
