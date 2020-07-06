@@ -1,4 +1,4 @@
-# Genetic predisposition to myeloproliferative neoplasms implicates hematopoietic stem cell biology
+# Inherited myeloproliferative neoplasm risk impacts hematopoietic stem cells
 
 See manuscript [here](https://www.biorxiv.org/content/10.1101/790626v1)
 
