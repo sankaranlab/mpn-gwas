@@ -57,9 +57,52 @@ mr_presso(data = dat_clumped,
           NbDistribution = 1000,  SignifThreshold = 0.05)
 
 # Plots
+mr_scatter_plot <- function(mr_results, dat)
+{
+  # dat <- subset(dat, paste(id.outcome, id.exposure) %in% paste(mr_results$id.outcome, mr_results$id.exposure))
+  requireNamespace("ggplot2", quietly=TRUE)
+  requireNamespace("plyr", quietly=TRUE)
+  mrres <- plyr::dlply(dat, c("id.exposure", "id.outcome"), function(d)
+  {
+    d <- plyr::mutate(d)
+    if(nrow(d) < 2 | sum(d$mr_keep) == 0)
+    {
+      return(blank_plot("Insufficient number of SNPs"))
+    }
+    d <- subset(d, mr_keep)
+    index <- d$beta.exposure < 0
+    d$beta.exposure[index] <- d$beta.exposure[index] * -1
+    d$beta.outcome[index] <- d$beta.outcome[index] * -1
+    mrres <- subset(mr_results, id.exposure == d$id.exposure[1] & id.outcome == d$id.outcome[1])
+    mrres$a <- 0
+    if("MR Egger" %in% mrres$method)
+    {
+      temp <- mr_egger_regression(d$beta.exposure, d$beta.outcome, d$se.exposure, d$se.outcome, default_parameters())
+      mrres$a[mrres$method == "MR Egger"] <- temp$b_i
+    }
+    
+    if("MR Egger (bootstrap)" %in% mrres$method)
+    {
+      temp <- mr_egger_regression_bootstrap(d$beta.exposure, d$beta.outcome, d$se.exposure, d$se.outcome, default_parameters())
+      mrres$a[mrres$method == "MR Egger (bootstrap)"] <- temp$b_i
+    }
+    
+    ggplot2::ggplot(data=d, ggplot2::aes(x=beta.exposure, y=beta.outcome)) +
+      ggplot2::geom_errorbar(ggplot2::aes(ymin=beta.outcome-se.outcome, ymax=beta.outcome+se.outcome), colour="grey", width=0,size=0.35) +
+      ggplot2::geom_errorbarh(ggplot2::aes(xmin=beta.exposure-se.exposure, xmax=beta.exposure+se.exposure), colour="grey", height=0,size=0.35) +
+      ggplot2::geom_point(ggplot2::aes(text=paste("SNP:", SNP)),size=0.35) +
+      ggplot2::geom_abline(data=mrres, ggplot2::aes(intercept=a, slope=b, colour=method),size=0.35, show.legend=TRUE) +
+      ggplot2::scale_colour_manual(values=c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928")) +
+      ggplot2::labs(colour="MR Test", x=paste("SNP effect on", d$exposure[1]), y=paste("SNP effect on", d$outcome[1])) +
+      ggplot2::theme(legend.position="top", legend.direction="vertical") +
+      ggplot2::guides(colour=ggplot2::guide_legend(ncol=2))
+  })
+  mrres
+}
+
 p1 <- mr_scatter_plot(res, dat_clumped)
-p1 <- p1[[1]] + pretty_plot(fontsize=7) + L_border() + theme(legend.position ="top") +
-  geom_hline(yintercept=0,linetype="dashed")
+p1 <- p1[[1]] + pretty_plot(fontsize=6) + L_border() + theme(legend.position ="none") +
+  geom_hline(yintercept=0,linetype="dashed",size=0.35)
 p1
 
 res_single <- mr_singlesnp(dat_clumped,single_method="mr_meta_fixed",
@@ -74,9 +117,9 @@ p3 <- p3[[1]]+ pretty_plot(fontsize=6) + L_border() + theme(legend.position = "n
 # Save plots 
 if (TRUE){
   cowplot::ggsave2(p1, file="../output/telomere_length/mendelian_randomization/MR_scatterplot.pdf", 
-                  width=2, height=2.5)
+                   width=3.3, height=3.3,units="cm")
   cowplot::ggsave2(p2, file="../output/telomere_length/mendelian_randomization/MR_singleSNP.pdf", 
-                  width=2.5, height=3)
+                   width=2.5, height=3)
   cowplot::ggsave2(p3, file="../output/telomere_length/mendelian_randomization/MR_leave_one_out.pdf", 
-                  width=2.5, height=3)
+                   width=2.5, height=3)
 }

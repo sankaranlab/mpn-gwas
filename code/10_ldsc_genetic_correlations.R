@@ -21,13 +21,14 @@ gencors_MPN$p2 <- gsub("_"," ",gencors_MPN$p2) %>% gsub("\\..*"," ",.)
 gencors_MPN$significance <- factor(gencors_MPN$significance,levels=c("no","nominal","FDR"))
 
 mpn_gc <- ggplot(gencors_MPN,aes(x=p2,color=significance)) +
-  geom_pointrange(aes(y = rg, ymin = rg-se, ymax = rg+se),size=0.25) +
+  geom_pointrange(aes(y = rg, ymin = rg-se, ymax = rg+se),size=0.25,fatten = 0.05) +
   coord_flip() +
   scale_color_manual(values=pval_colormap) +
-  geom_hline(yintercept = 0, linetype = 2) +
+  geom_hline(yintercept = 0, linetype = 2,size=0.25) +
   labs(x="",y="MPN genetic correlation") +
-  pretty_plot(fontsize = 8) + L_border() + 
-  theme(legend.position="bottom")
+  pretty_plot(fontsize = 6) + L_border() + 
+  theme(legend.position="none")
 mpn_gc
 
-cowplot::ggsave2(mpn_gc, file = "../output/ldsc/genetic_correlations_mpn_constrained.pdf", width = 2.5, height =2.75)
+cowplot::ggsave2(mpn_gc, file = "../output/ldsc/genetic_correlations_mpn_constrained.pdf", 
+                 width = 3.5, height =3.9,units="cm")

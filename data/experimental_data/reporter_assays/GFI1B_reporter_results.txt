@@ -1,0 +1,10 @@
+type	activity
+risk	0.78813165
+risk	0.86841671
+risk	1.10203531
+nonrisk	1.41321607
+nonrisk	1.79686602
+nonrisk	1.29729081
+MinP	0.13432769
+MinP	0.12499938
+MinP	0.22825973

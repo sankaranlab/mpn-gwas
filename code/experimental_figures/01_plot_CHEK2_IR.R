@@ -20,7 +20,7 @@ p1 <- ggplot(ir,aes(x=celltype,y=count,fill=group))+
   scale_y_continuous(expand = c(0, 0.05)) +
   theme(legend.position="none")
 
-cowplot::ggsave2(p1, file="../../output/experimental_plots/chek2/chek2_cycling_IR.pdf",height=1.7,width=2)
+# cowplot::ggsave(p1, file="../../output/experimental_plots/chek2/chek2_cycling_IR.pdf",height=1.7,width=2)
 
 # Check for significance
 sapply(unique(ir$celltype),function(index){

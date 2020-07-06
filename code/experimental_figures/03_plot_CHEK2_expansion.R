@@ -42,15 +42,14 @@ means <- chek2 %>% group_by(day,type) %>% summarise(mean = mean(count),sem = sd(
 # Plot
 require(scales)
 p1 <- ggplot(means,aes(x=day,y=mean,color=type))+ 
-  geom_point() + geom_line()+
-  geom_errorbar(aes(ymin=mean-sem, ymax=mean+sem),width = 3,
+  geom_point(size=0.8) + geom_line()+
+  geom_errorbar(aes(ymin=mean-sem, ymax=mean+sem),
                  position=position_dodge(.9)) +
   scale_color_manual(values = jdb_palette("brewer_spectra")[c(1,8)]) +
   scale_y_log10(limits = c(0.1,100000),breaks=c(0.1,1,10,100,100,1000,10000,100000),labels=comma)+
   labs(x="Days",y="Expansion") +
-  pretty_plot(fontsize=8) + L_border() +
+  pretty_plot(fontsize=5) + L_border() +
   theme(legend.title = element_blank(),legend.position = "none")
-p1  
 
 cowplot::ggsave2(p1,file="../../output/experimental_plots/chek2/chek2_expansion.pdf",
-                height=2,width=2)
+                height=3.5,width=3,units="cm")

@@ -45,5 +45,5 @@ p2 <- ggplot(combined,aes(x=Sample,y=mean_percents)) +
   scale_y_continuous(expand=c(0,0))
 p2
 
-cowplot::ggsave2(p1, file="../../output/experimental_plots/chek2/chek2_cfu_counts.pdf",height=2,width=2)
-cowplot::ggsave2(p2, file="../../output/experimental_plots/chek2/chek2_cfu_percents.pdf",height=2,width=2)
+cowplot::ggsave(p1, file="../../output/experimental_plots/chek2/chek2_cfu_counts.pdf",height=2,width=2)
+cowplot::ggsave(p2, file="../../output/experimental_plots/chek2/chek2_cfu_percents.pdf",height=2,width=2)

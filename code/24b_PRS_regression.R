@@ -1,6 +1,7 @@
 library(tidyverse)
 library(data.table)
 library(pROC)
+library(ROCR)
 library(plotROC)
 library(rms)
 library(scales)
@@ -45,7 +46,24 @@ predpr <- predict(prs_model,type=c("response"))
 
 # ROC
 roc(pheno,predpr)
-# plot(roc(pheno,predpr))
+
+no_prs_model <- glm(pheno ~ ., data=covars_to_use %>% dplyr::select(-PRS),family="binomial")
+noPRS_predpr <- predict(no_prs_model,type=c("response"))
+roc(pheno,noPRS_predpr)
+
+roc_df <- rbind(
+  data.frame(pred = predpr,group = "PRS",y = pheno),
+  data.frame(pred = noPRS_predpr,group = "no PRS", y = pheno)
+)
+
+# ROC curve
+roc_plot <- ggplot(roc_df, aes(d = y, m = pred, color = group)) +
+  geom_roc(n.cuts = 0) + pretty_plot(fontsize= 7) + L_border() +
+  labs(x = "1 - Specificity", y = "Sensitivity", color = "") +
+  scale_color_manual(values=jdb_palette("brewer_spectra")[c(7,1)]) +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  theme(legend.position = "none") + 
+  coord_fixed()
 
 # Calculate Nagelkerke's pseudo-R2 to estimate explained variance
 R2_difference <- function(variable,pheno,covars){
@@ -70,7 +88,7 @@ env_incremental_r2 <- lapply(variables,function(y) R2_difference(variable = y, p
 p1 <- ggplot(incremental_r2,aes(x=variable,y=100*incremental_r2)) +
   geom_bar(position=position_dodge(), stat="identity", fill = "firebrick", color = "black")  + 
   labs(x="",y="Incremental pseudo-R2 (%)")+
-  pretty_plot(fontsize = 8) + L_border()+
+  pretty_plot(fontsize = 7) + L_border()+
   scale_y_continuous(expand = c(0, 0)) +
   theme(legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust=1)) 
@@ -89,7 +107,7 @@ decile_regression <- function(decile,baseline=1){
   prevalence <- 100*nrow(subset[subset$pheno == 1,]) / nrow(subset) 
   
   if (decile ==baseline){
-    d <- data.frame(decile=decile,prevalence = prevalence,OR=1,bottom95CI=1,top95CI=1)
+    d <- data.frame(decile=decile,n = nrow(subset[subset$pheno == 1,]),prevalence = prevalence,OR=1,bottom95CI=1,top95CI=1)
   } else{
     results <- glm(pheno ~ ., data=covars_to_use,family="binomial") %>% summary()
     beta <- results$coefficients[nrow(results$coefficients),"Estimate"]
@@ -99,6 +117,7 @@ decile_regression <- function(decile,baseline=1){
     bottom95ci <- exp(beta - 1.96*error)
     
     d <- data.frame(decile=decile,
+                    n = nrow(subset[subset$pheno == 1,]),
                     prevalence = prevalence,
                     OR=round(OR,3),
                     bottom95CI=round(bottom95ci,3),
@@ -113,39 +132,39 @@ decile_ORs_compared_to_1 <- lapply(seq(1,10),function(y) decile_regression(y,bas
 decile_ORs_compared_to_1
 
 p2 <- ggplot(decile_ORs,aes(x=decile,y=OR)) +
-  geom_point() + geom_line() +
+  geom_point(shape = 15) + 
   geom_errorbar(aes(ymin = bottom95CI, ymax = top95CI), colour="black", width=.1) +
   geom_hline(yintercept = 1, linetype = 2) +
   labs(x="Decile of PRS (1 = lowest)",y="Odds Ratio") +
   scale_x_continuous(breaks=seq(1,10)) +
   scale_y_continuous(breaks=seq(1,6)) +
   theme(legend.position="none") +
-  pretty_plot(fontsize = 8) + L_border() 
+  pretty_plot(fontsize = 7) + L_border() 
 p2
 
 p3 <- ggplot(decile_ORs_compared_to_1,aes(x=decile,y=OR)) +
-  geom_point() + geom_line() +
+  geom_point(shape = 15) +
   geom_errorbar(aes(ymin = bottom95CI, ymax = top95CI), colour="black", width=.1) +
   geom_hline(yintercept = 1, linetype = 2) +
   labs(x="Decile of PRS (1 = lowest (reference))",y="Odds Ratio") +
   scale_x_continuous(breaks=seq(1,10)) +
   scale_y_continuous(breaks=seq(1,6)) +
   theme(legend.position="none") +
-  pretty_plot(fontsize = 8) + L_border() 
-p3
+  pretty_plot(fontsize = 7) + L_border() 
 
 p4 <- ggplot(decile_ORs,aes(x=decile,y=prevalence)) +
-  geom_point() + geom_line() +
+  geom_point(shape = 15) + 
   labs(x="Decile of PRS (1 = lowest (reference))",y="Prevalence of MPN (%)") +
   scale_x_continuous(breaks=seq(1,10)) +
   theme(legend.position="none") +
-  pretty_plot(fontsize = 8) + L_border() 
+  pretty_plot(fontsize = 7) + L_border() 
 
 if (toplot){
-  cowplot::ggsave2(p1,file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_incremental_r2_comparison.pdf"),width=2,height=2)  
-  cowplot::ggsave2(p2, file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_decile_ORs.pdf"),width = 2, height=2)
-  cowplot::ggsave2(p3, file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_decile_ORs_compared_to_1.pdf"),width = 2, height=2)
-  cowplot::ggsave2(p4, file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_decile_prevalence.pdf"),width = 2, height=2)
+  cowplot::ggsave2(roc_plot,file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_roc_comparison.pdf"),width=1.5,height=1.5)  
+  cowplot::ggsave2(p1,file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_incremental_r2_comparison.pdf"),width=1.5,height=1.5)  
+  cowplot::ggsave2(p2, file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_decile_ORs.pdf"),width = 1.5, height=1.5)
+  cowplot::ggsave2(p3, file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_decile_ORs_compared_to_1.pdf"),width = 1.5, height=1.5)
+  cowplot::ggsave2(p4, file=paste0("../output/PRS/r4_PRS.pruned.",scalar,"_decile_prevalence.pdf"),width = 1.5, height=1.5)
 }
 
 

@@ -1,0 +1,10 @@
+Sample	Rel_luciferase_activity
+MinP	0.082004556
+MinP	0.077181208
+MinP	0.091324201
+nonrisk	10.72173913
+nonrisk	10.05252101
+nonrisk	8.171253823
+risk	2.600961538
+risk	1.96122449
+risk	2.082442748

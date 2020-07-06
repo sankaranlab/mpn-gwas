@@ -77,10 +77,10 @@ if (FALSE){
     geom_errorbar(aes(ymin=OR_lowerCI, ymax=OR_upperCI),col="black",width=0.25,cex=0.5)+ 
     facet_wrap(~ID,strip.position="left",nrow=9,scales ="fixed") +
     coord_flip() + 
-    pretty_plot(fontsize=7) 
+    pretty_plot(fontsize=6) 
   selected
   
-  cowplot::ggsave2(selected,file="../output/locus_plots/ind_cohort_forestplot_selected.pdf",width=3.5,height=4)
+  cowplot::ggsave2(selected,file="../output/locus_plots/ind_cohort_forestplot_selected.pdf",width=2,height=3)
   
   genomewide <- ggplot(data=combined %>% filter(rsid %in% sentinels$rsid),
                        aes(x = cohort,y = OR,ymin = OR_lowerCI, ymax = OR_upperCI))+

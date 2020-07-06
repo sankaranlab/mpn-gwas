@@ -45,7 +45,8 @@ ranksums <- sapply(celltypes,function(ct){
     sum(1:nrow(log2cpm.df)*log2cpm.df[order(log2cpm.df[,ct], decreasing = TRUE), "target_gene"])
   })
 
-pvals <- pnorm((mean(permuted) - ranksums)/sd(permuted), lower.tail = FALSE)%>% data.frame() %>% rownames_to_column() %>% setNames(.,c("celltype","pval")) %>% 
+pvals <-  as.numeric(2*pnorm((mean(permuted) - ranksums)/sd(permuted), lower.tail = FALSE)) %>%
+  data.frame() %>% rownames_to_column() %>% setNames(.,c("celltype","pval")) %>% 
   mutate(celltype = colnames(log2cpm),FDR = p.adjust(pval,method = "fdr"),logp = -log10(pval)) 
 
 pvals
@@ -95,6 +96,17 @@ p2 <- ggplot(combined, aes(x=variable, y=tg_mean,fill=variable)) +
         axis.text.x = element_text(angle = 45, hjust = 1)) 
 p2
 
+box <- ggplot(toplot, aes(x=variable, y=value,fill=variable, color=variable)) + 
+  geom_boxplot(varwidth = F,alpha = 0.6) + 
+  scale_fill_manual(values = ejc_color_maps) + 
+  scale_color_manual(values = ejc_color_maps) + 
+  geom_point(data = combined, aes(x=variable, y=pc_mean),shape = 23,color="black",fill="black", size = 1.5) +
+  pretty_plot(fontsize=8) + L_border() + 
+  labs(x="",y="Target gene expression (log2(cpm))") +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) 
+box
+
 p3 <- ggplot(combined, aes(x=variable, y=normalized,fill=variable)) + 
   geom_bar(position=position_identity(), stat="identity", color = "black", width = 0.7) +
   scale_fill_manual(values = ejc_color_maps) +
@@ -107,6 +119,8 @@ p3
 
 if (FALSE){
   cowplot::ggsave2(p2, file="../output/target_genes/r4_scored_noABC_min2_target_genes_expression_barplot_allheme.pdf",
+                   height = 2.5,width = 3)
+  cowplot::ggsave2(box, file="../output/target_genes/r4_scored_noABC_min2_target_genes_expression_boxplot_allheme.pdf",
                    height = 2.5,width = 3)
   cowplot::ggsave2(p3, file="../output/target_genes/r4_scored_noABC_min2_target_genes_expression_barplot_allheme_normalized.pdf",
                    height = 2.5,width = 3)

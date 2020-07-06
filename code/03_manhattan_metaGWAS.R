@@ -65,20 +65,21 @@ tohighlight <- filtered %>% filter(RSID %in% sigsnps) %>% mutate(group="genome-w
 tohighlight <- rbind(tohighlight, filtered %>% filter(RSID %in% suggsnps) %>% mutate(group="suggestive"))
 
 filtered$newCHR <- paste0("chr",filtered$CHR)
+
+pointsize=0.4
 p1 <- ggman(filtered %>% filter(pvalue<0.01), snp = "RSID", bp = "POS", chrom = "newCHR", pvalue = "pvalue",
-            sigLine = 7.30103,relative.positions = TRUE,pointSize = 0.8) + 
-  pretty_plot(fontsize = 12) + 
+            sigLine = -log10(5e-8),relative.positions = TRUE,pointSize = pointsize/2) + 
+  pretty_plot(fontsize = 5) + 
   scale_color_manual(values=c("gray", "dimgray")) +
   ggtitle("") +
-  scale_y_continuous(breaks=seq(0,120,10)) +
+  scale_y_continuous(breaks=seq(0,130,10)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-p2 <- p1 +  geom_point_rast(data = p1[[1]] %>% filter(RSID %in% suggsnps),colour= "darkolivegreen3",size=0.8) +
-  geom_point_rast(data = p1[[1]] %>% filter(RSID %in% sigsnps),colour= "blue",size=0.8) +
-  geom_point_rast(data = p1[[1]] %>% filter(RSID %in% cojo_sentinels),colour= "black",fill="firebrick",pch=21,size=1.5) 
+p2 <- p1 +  geom_point(data = p1[[1]] %>% filter(RSID %in% suggsnps),colour= "darkolivegreen3",size=pointsize) +
+  geom_point(data = p1[[1]] %>% filter(RSID %in% sigsnps),colour= "dodgerblue4",size=pointsize) +
+  geom_point(data = p1[[1]] %>% filter(RSID %in% cojo_sentinels),colour= "black",fill="firebrick",pch=21,size=1.4*pointsize) 
 
 cowplot::ggsave2(p2, file="../output/gwas_plots/meta.finngen.r4.manhattan.pdf",
-                width=9.5,height=5.5)
-
+                 width=11,height=5.5, units = "cm")
 
 # QQ plot -------------------------------------------------------------
 # Lambda GC
