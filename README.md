@@ -1,6 +1,6 @@
-# Inherited myeloproliferative neoplasm risk impacts hematopoietic stem cells
+# Inherited myeloproliferative neoplasm risk affects haematopoietic stem cells
 
-See manuscript [here](https://www.biorxiv.org/content/10.1101/790626v1)
+See publication [here](https://www.nature.com/articles/s41586-020-2786-7)
 
 ### Contact
 - [Erik Bao](mailto:ebao@broadinstitute.org)
